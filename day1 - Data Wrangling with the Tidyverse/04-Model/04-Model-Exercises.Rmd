@@ -1,0 +1,175 @@
+---
+title: "Models"
+---
+
+
+```{r setup}
+library(tidyverse)
+library(modelr)
+library(broom)
+
+# Import wages here
+
+# Fall back in case you cannot load wages
+ wages <- heights %>%
+    filter(income > 0) %>%
+    mutate(marital = as.character(marital),
+           sex = as.character(sex))
+```
+
+## Your Turn 1
+
+* Change the working directory to `04-Models`. 
+* Then import `wages.xlsx` as wages and *copy the code to your setup chunk*.
+* Be sure to set NA: to NA.
+
+```{r}
+wages
+```
+
+```{r}
+wages %>%
+ ggplot(aes(log(income))) + geom_histogram(binwidth = 0.25)
+```
+
+## Your Turn 2
+
+Fit the model on the slide and then examine the output. What does it look like?
+
+```{r}
+mod_e <- lm(log(income) ~ education, data = wages)
+mod_e
+```
+
+```{r}
+class(mod_e)
+```
+
+## Your Turn 3
+
+Use a pipe to model `log(income)` against `height`. Then use broom and dplyr functions to extract:
+
+1. The **coefficient estimates** and their related statistics 
+2. The **adj.r.squared** and **p.value** for the overall model
+
+```{r}
+mod_h <- wages %>% 
+  lm(log(income) ~ height, data = .)
+mod_h %>% 
+  tidy()
+```
+
+
+```{r}
+mod_h %>%
+ glance() %>%
+ select(adj.r.squared, p.value)
+```
+
+```{r}
+mod_h %>%
+ tidy() %>% filter(p.value < 0.05)
+```
+
+```{r}
+mod_e %>%
+ tidy() %>% filter(p.value < 0.05)
+```
+
+```{r}
+mod_eh <- wages %>%
+ lm(log(income) ~ education + height, data = .)
+mod_eh %>%
+ tidy()
+```
+
+## Your Turn 4
+
+Model `log(income)` against `education` and `height` and `sex`. Can you interpret the coefficients?
+
+```{r}
+mod_ehs <- wages %>% 
+  lm(log(income) ~ education + height + sex, data = .)
+
+mod_ehs %>% 
+  tidy()
+```
+
+```{r}
+wages <-
+  wages %>% 
+  mutate(sex = factor(sex, levels = c('male', 'female')))
+```
+
+```{r}
+wages %>% 
+  lm(log(income) ~ education + height + sex, data = .) %>% 
+  tidy()
+```
+
+
+## Your Turn 5
+
+Add `+ geom_smooth(method = lm)` to the code below. What happens?
+
+```{r}
+wages %>%
+     ggplot(aes(x = height, y = log(income))) +
+     geom_point(alpha = 0.1) +
+  geom_smooth(method = lm)
+```
+
+## Help Me
+
+```{r}
+wages %>%
+ add_residuals(mod_ehs) %>%
+ ggplot() +
+ geom_histogram(aes(resid))
+```
+
+```{r}
+wages %>%
+ add_residuals(mod_ehs) %>%
+ ggplot() +
+ geom_histogram(aes(resid))
+```
+
+```{r}
+wages %>%
+  spread_residuals(mod_h, mod_eh, mod_ehs)
+```
+
+```{r}
+wages %>% 
+  gather_residuals(mod_h, mod_eh, mod_ehs)
+```
+
+## Your Turn 6
+
+Use `gather_residuals` to complete the code below, which compares the residuals of all three models, `mod_h`, `mod_eh`, and `mod_ehs`.
+
+```{r warning = FALSE, message = FALSE}
+
+# In case you haven't made the three models
+mod_h <- wages %>% lm(log(income) ~ height, data = .)
+mod_eh <- wages %>% lm(log(income) ~ education + height, data = .)
+mod_ehs <- wages %>% lm(log(income) ~ education + height + sex, data = .)
+
+# Be sure to remove or comment out each _ before running the code
+wages %>% 
+  gather_residuals(mod_h, mod_eh, mod_ehs) %>% 
+  ggplot() + 
+    geom_histogram(aes(x = resid)) +
+    facet_grid(model ~ .)
+```
+
+***
+
+# Take Aways
+
+* Use `glance()`, `tidy()`, and `augment()` from the **broom** package to return model values in a data frame.
+
+* Use `add_predictions()` or `gather_predictions()` or `spread_predictions()` from the **modelr** package to visualize predictions.
+
+* Use `add_residuals()` or `gather_residuals()` or `spread_residuals()` from the **modelr** package to visualize residuals.
